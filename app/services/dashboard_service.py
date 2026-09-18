@@ -24,7 +24,7 @@ from app.data import preprocessing as pp
 from app.data.preprocessing import compute_soil_fertility_index
 from app.decision import ranking
 from app.fuzzy import engine as fz
-from app.optimization.nsga2_runner import extract_pareto_plans, run_nsga2
+from app.optimization.nsga2_runner import extract_convergence_history, extract_pareto_plans, run_nsga2
 from app.optimization.problem import FarmPlanProblem
 from app.services import results_store
 
@@ -70,15 +70,36 @@ def _latest_year_for(df, location: str) -> int:
 # ---------------------------------------------------------------------------
 
 _CONDITION_TEXT = {
-    "rainy": "Rainy",
-    "partly_cloudy_day": "Partly Cloudy",
     "sunny": "Sunny",
+    "partly_cloudy_day": "Partly Cloudy",
+    "cloud": "Cloudy",
+    "foggy": "Foggy",
+    "rainy": "Rainy",
+    "thunderstorm": "Thunderstorm",
+    "ac_unit": "Snow",
+}
+
+# WMO weather-interpretation codes (used by Open-Meteo's weather_code
+# field) mapped onto the small set of condition keys the frontend renders
+# directly as Material Symbols icon names. See
+# https://open-meteo.com/en/docs for the authoritative code table.
+_WMO_CODE_TO_CONDITION = {
+    0: "sunny",
+    1: "partly_cloudy_day", 2: "partly_cloudy_day",
+    3: "cloud",
+    45: "foggy", 48: "foggy",
+    51: "rainy", 53: "rainy", 55: "rainy", 56: "rainy", 57: "rainy",
+    61: "rainy", 63: "rainy", 65: "rainy", 66: "rainy", 67: "rainy",
+    80: "rainy", 81: "rainy", 82: "rainy",
+    71: "ac_unit", 73: "ac_unit", 75: "ac_unit", 77: "ac_unit", 85: "ac_unit", 86: "ac_unit",
+    95: "thunderstorm", 96: "thunderstorm", 99: "thunderstorm",
 }
 
 
 def _condition_for_rainfall(monthly_rainfall_mm: float) -> str:
-    """Thresholds as specified for this project: no live weather API, so
-    'condition' is a proxy read off historical monthly rainfall."""
+    """Thresholds used only by the CSV-derived fallback path (no live
+    internet access): 'condition' is a proxy read off historical monthly
+    rainfall rather than a real weather code."""
     if monthly_rainfall_mm > 100:
         return "rainy"
     if monthly_rainfall_mm > 50:
@@ -86,8 +107,61 @@ def _condition_for_rainfall(monthly_rainfall_mm: float) -> str:
     return "sunny"
 
 
-def get_weather(location: str) -> dict:
-    location = resolve_location(location)
+def _get_weather_live(location: str) -> dict:
+    """Real current + 5-day weather from Open-Meteo (free, no API key
+    required for non-commercial use -- see https://open-meteo.com/en/docs).
+    Raises on any network/parsing problem so the caller can fall back to
+    the CSV-derived estimate rather than ever inventing numbers."""
+    import requests
+
+    lat, lon = config.DISTRICT_COORDINATES[location]
+    resp = requests.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params={
+            "latitude": lat,
+            "longitude": lon,
+            "current": "temperature_2m,relative_humidity_2m,weather_code",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum",
+            "timezone": "Asia/Kolkata",
+            "forecast_days": 6,
+        },
+        timeout=5,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    current = data["current"]
+    daily = data["daily"]
+    condition = _WMO_CODE_TO_CONDITION.get(int(current["weather_code"]), "partly_cloudy_day")
+
+    forecast = []
+    # index 0 of `daily` is today -- the "forecast" is the next 5 days.
+    for i in range(1, min(6, len(daily["time"]))):
+        date = _dt.datetime.strptime(daily["time"][i], "%Y-%m-%d")
+        day_condition = _WMO_CODE_TO_CONDITION.get(int(daily["weather_code"][i]), "partly_cloudy_day")
+        forecast.append({
+            "day": date.strftime("%a"),
+            "icon": day_condition,
+            "temp": f"{round(daily['temperature_2m_max'][i])}° / {round(daily['temperature_2m_min'][i])}°",
+        })
+
+    return {
+        "location": location,
+        "temp": round(current["temperature_2m"]),
+        "condition": condition,
+        "conditionText": _CONDITION_TEXT.get(condition, condition.title()),
+        "rainfall_mm": round(float(daily["precipitation_sum"][0]), 1),
+        "humidity": round(current["relative_humidity_2m"]),
+        "source": "Live (Open-Meteo)",
+        "forecast": forecast,
+    }
+
+
+def _get_weather_from_csv(location: str) -> dict:
+    """Fallback used only when the live call above fails (no internet,
+    Open-Meteo unreachable, etc.) -- derived from this project's own
+    historical rainfall.csv, clearly labelled as such via `source` so it's
+    never mistaken for a live reading."""
     rainfall = loader.load_all()["rainfall"]
     rows = rainfall[rainfall["Location"] == location]
     today = _dt.date.today()
@@ -108,10 +182,6 @@ def get_weather(location: str) -> dict:
     condition = _condition_for_rainfall(current["rainfall_mm"])
     temp = round((current["max_temp_c"] + current["min_temp_c"]) / 2)
 
-    # "5-day" forecast proxy: the next 5 calendar months' historical
-    # averages, one per weekday label -- there's no live forecast source,
-    # so this is explicitly a seasonal-trend proxy, not a real 5-day
-    # forecast (documented in docs/frontend_integration.md).
     forecast = []
     for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri"], start=1):
         month_name = _MONTHS_IN_YEAR_ORDER[(today.month - 1 + i) % 12]
@@ -129,9 +199,18 @@ def get_weather(location: str) -> dict:
         "conditionText": _CONDITION_TEXT[condition],
         "rainfall_mm": current["rainfall_mm"],
         "humidity": round(current["humidity_pct"]),
-        "source": "Historical CSV data",
+        "source": "Historical CSV average (live weather unavailable)",
         "forecast": forecast,
     }
+
+
+def get_weather(location: str) -> dict:
+    location = resolve_location(location)
+    try:
+        return _get_weather_live(location)
+    except Exception as live_exc:  # noqa: BLE001 -- deliberate: fall back to real historical data, never fabricate a reading
+        print(f"[dashboard_service.get_weather] live Open-Meteo call failed for {location}: {live_exc!r}")
+        return _get_weather_from_csv(location)
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +242,26 @@ def _current_land_row(land_df, location: str, year: int):
     return season_rows.iloc[0] if not season_rows.empty else year_rows.iloc[-1]
 
 
-def get_dashboard(location: str) -> dict:
+
+class PlanGenerationError(RuntimeError):
+    """Raised by get_plans() when a live NSGA-II run fails and there is
+    no other honest way to answer the request. Previously this path
+    silently substituted the last saved run, then single-crop CSV
+    estimates, flagged only via an is_fallback/fallback_reason field in
+    the response body -- easy for a caller to miss. Replaced with a
+    real error (see main.py, which turns this into HTTP 503) so a
+    failed optimisation is never silently presented as a real plan.
+    """
+
+def get_dashboard(location: str, client_id: str | None = None) -> dict:
+    """`client_id` (optional) is the requesting browser's persistent id --
+    see FarmPlanRequest.client_id. There are no real user accounts in this
+    project, so `active_plans` only counts *this* visitor's own saved runs
+    for the district -- the same rule get_history() already uses. No
+    client_id, or a mismatch (including older/demo/seed runs saved before
+    client_id existed, which have none), means it's excluded -- a
+    brand-new browser must never see someone else's, or seed/demo, saved
+    runs counted as its own active plans."""
     location = resolve_location(location)
     data = loader.load_all()
     crop_df, land_df, water_df = data["crop"], data["land"], data["water"]
@@ -183,8 +281,12 @@ def get_dashboard(location: str) -> dict:
     estimated_yield = round(this_year_yield / 1000.0, 1)  # kg/ha -> t/ha
     yield_trend = f"{'+' if pct_change >= 0 else ''}{round(pct_change, 1)}%"
 
-    # --- active_plans: saved optimisation runs on disk for this district ---
-    active_plans = sum(1 for r in results_store.list_saved_runs() if r["location"] == location)
+    # --- active_plans: this browser's own saved optimisation runs on disk
+    # for this district (matched by client_id -- same rule as get_history) ---
+    active_plans = sum(
+        1 for r in results_store.list_saved_runs()
+        if r["location"] == location and client_id and r.get("client_id") == client_id
+    )
 
     # --- soil (current season's land.csv row) ---
     land_row = _current_land_row(land_df, location, latest_year)
@@ -286,12 +388,25 @@ def get_soil_profile(location: str) -> dict:
 # GET /api/history/{location}
 # ---------------------------------------------------------------------------
 
-def get_history(location: str) -> dict:
+def get_history(location: str, client_id: str | None = None) -> dict:
+    """`client_id` (optional) is the requesting browser's persistent id --
+    see FarmPlanRequest.client_id. There are no real user accounts in this
+    project, so a saved run only counts as *this* visitor's completed
+    history if its stored client_id matches exactly. No client_id, or a
+    mismatch (including older/demo runs saved before client_id existed,
+    which have none), means it's excluded here -- a brand-new browser must
+    never see someone else's, or seed/demo, saved runs presented as its
+    own history. By product decision this returns ONLY a visitor's own
+    real saved runs -- no CSV-derived filler rows for years nobody has
+    actually run yet; the frontend shows a plain "no runs yet" empty
+    state instead (see RunOptimizationView / HistoryView)."""
     location = resolve_location(location)
 
     real_runs = []
     for summary in results_store.list_saved_runs():
         if summary["location"] != location:
+            continue
+        if not client_id or summary.get("client_id") != client_id:
             continue
         record = results_store.load_run(summary["run_id"])
         if record is None:
@@ -314,43 +429,7 @@ def get_history(location: str) -> dict:
             "fuzzy_weights": record["fuzzy_assessment"],
             "is_estimated": False,
         })
-    covered_years = {int(r["season"].split()[-1]) for r in real_runs}
-
-    # Years with no saved optimisation run are filled in from the
-    # district's own crop.csv Kharif-season average -- NOT a real
-    # optimisation result, clearly flagged is_estimated=True, so the
-    # history view isn't empty for years nobody has actually run yet.
-    crop_df = loader.load_all()["crop"]
-    loc_crop = crop_df[(crop_df["Location"] == location) & (crop_df["Season"] == "Kharif")]
-    estimated = []
-    for year in sorted(int(y) for y in loc_crop["Year"].unique()):
-        if year in covered_years:
-            continue
-        year_rows = loc_crop[loc_crop["Year"] == year]
-        mean_yield_t_ha = round(float(year_rows["Yield_Kg_Ha"].mean()) / 1000.0, 1)
-        cost_per_ha = (
-            year_rows["Fertilizer_N_Kg_Ha"] * config.FERTILIZER_PRICE_RS_PER_KG_NUTRIENT["N"]
-            + year_rows["Fertilizer_P_Kg_Ha"] * config.FERTILIZER_PRICE_RS_PER_KG_NUTRIENT["P"]
-            + year_rows["Fertilizer_K_Kg_Ha"] * config.FERTILIZER_PRICE_RS_PER_KG_NUTRIENT["K"]
-            + year_rows["Pesticide_Cost_Rs_Ha"]
-            + year_rows["Labor_Days_Ha"] * config.LABOR_WAGE_RS_PER_DAY
-        )
-        mean_cost_per_ha = round(float(cost_per_ha.mean()))
-        estimated.append({
-            "id": f"estimated_{location.lower()}_{year}",
-            "season": f"Kharif {year}",
-            "date": f"{year}-09-01",
-            "location": location,
-            "target_yield": f"{mean_yield_t_ha} t/ha",
-            "est_cost": f"₹{mean_cost_per_ha:,}/ha",
-            "status": "Estimated (no saved run)",
-            "num_plans": 0,
-            "preference": None,
-            "fuzzy_weights": None,
-            "is_estimated": True,
-        })
-
-    history = sorted(real_runs + estimated, key=lambda h: h["season"], reverse=True)
+    history = sorted(real_runs, key=lambda h: h["season"], reverse=True)
     return {"history": history}
 
 
@@ -367,15 +446,21 @@ def _run_dashboard_pareto_front(
     year: Optional[int] = None,
     total_land_ha: float = 5.0,
     budget_rs: Optional[float] = None,
+    track_history: bool = False,
 ):
     """Runs preprocessing -> fuzzy -> NSGA-II once. Returns (profile,
-    assessment, raw_feasible_plans, crop_confidence_map) so callers can
-    re-rank the same front under different TOPSIS preferences without
+    assessment, raw_feasible_plans, crop_confidence_map, result) so callers
+    can re-rank the same front under different TOPSIS preferences without
     re-running the optimiser. Deliberately calls the lower-level pieces
     (FarmPlanProblem / run_nsga2 / ranking.rank_plans) directly instead of
     app.services.plan_service.generate_farm_plans, specifically so it can
     ask for more than plan_service's hardcoded config.MAX_RETURNED_PLANS
-    (50) without touching that already-tested orchestration path."""
+    (50) without touching that already-tested orchestration path.
+
+    `track_history=True` costs ~2-3x the run time (pymoo snapshots every
+    generation) -- only GET /api/plans/{location} opts into it, to power
+    the Analytics convergence/hypervolume chart; GET /api/comparison/
+    {location} doesn't need it and stays at the cheaper default."""
     location = resolve_location(location)
     season = season or _current_season()
 
@@ -386,58 +471,97 @@ def _run_dashboard_pareto_front(
         profile.soil.fertility_index,
     )
     problem = FarmPlanProblem(profile, assessment, total_land_ha=total_land_ha, budget_rs=budget_rs)
-    result = run_nsga2(problem, pop_size=_DEMO_POP_SIZE, track_history=False)
+    result = run_nsga2(problem, pop_size=_DEMO_POP_SIZE, track_history=track_history)
     raw_plans = [p for p in extract_pareto_plans(result, problem) if p.feasible]
     crop_confidence_map = dict(zip(problem.crop_vec.names, problem.crop_vec.crop_yield_confidence.tolist()))
-    return profile, assessment, raw_plans, crop_confidence_map
+    return profile, assessment, raw_plans, crop_confidence_map, result
 
 
-def _last_saved_run_for(location: str) -> Optional[dict]:
-    for summary in results_store.list_saved_runs():
-        if summary["location"] == location:
-            return results_store.load_run(summary["run_id"])
-    return None
+# ---------------------------------------------------------------------------
+# GET /api/compare-fuzzy/{location} -- Task 4, fuzzy vs non-fuzzy study
+# ---------------------------------------------------------------------------
+
+def _summarize_pareto_front(raw_plans, total_land_ha: float) -> dict:
+    """Per-hectare aggregate stats over a feasible Pareto front, used to
+    compare the fuzzy and non-fuzzy runs on a like-for-like basis without
+    dumping every individual plan twice."""
+    if not raw_plans:
+        return {
+            "n_plans": 0,
+            "best_yield_tonnes_per_ha": None,
+            "min_cost_rs_per_ha": None,
+            "min_water_liters_per_ha": None,
+            "min_env_impact_per_ha": None,
+        }
+    per_ha = [
+        {
+            "yield_tonnes_per_ha": p.yield_tonnes / (sum(p.area_ha) or total_land_ha),
+            "cost_rs_per_ha": p.cost_rs / (sum(p.area_ha) or total_land_ha),
+            "water_liters_per_ha": p.water_liters / (sum(p.area_ha) or total_land_ha),
+            "env_impact_per_ha": p.env_impact_score / (sum(p.area_ha) or total_land_ha),
+        }
+        for p in raw_plans
+    ]
+    return {
+        "n_plans": len(raw_plans),
+        "best_yield_tonnes_per_ha": round(max(x["yield_tonnes_per_ha"] for x in per_ha), 3),
+        "min_cost_rs_per_ha": round(min(x["cost_rs_per_ha"] for x in per_ha), 2),
+        "min_water_liters_per_ha": round(min(x["water_liters_per_ha"] for x in per_ha), 1),
+        "min_env_impact_per_ha": round(min(x["env_impact_per_ha"] for x in per_ha), 3),
+    }
 
 
-def _synthetic_plans_from_csv(location: str) -> dict:
-    """Last-resort fallback when both a live NSGA-II run and any saved
-    result are unavailable: one single-crop 'plan' per top candidate crop,
-    computed directly from crop.csv with no optimisation at all. Clearly a
-    degenerate case, flagged via is_fallback/fallback_reason."""
+def get_fuzzy_comparison(
+    location: str,
+    season: Optional[str] = None,
+    year: Optional[int] = None,
+    total_land_ha: float = 5.0,
+    budget_rs: Optional[float] = None,
+) -> dict:
+    """Runs NSGA-II twice over the *same* region/season profile and fuzzy
+    assessment -- once with the Mamdani fuzzy uncertainty adjustment
+    applied to crop yield confidence (use_fuzzy=True, identical to what
+    every other endpoint already does), once with it bypassed
+    (use_fuzzy=False, every crop trusted at its raw "book" yield) -- and
+    returns per-hectare summary stats for both, side by side. This is the
+    Task 4 fuzzy-vs-non-fuzzy comparison study data source; see
+    AnalyticsView.jsx for where it's rendered.
+    """
+    from app.optimization.nsga2_runner import run_nsga2_with_fuzzy_toggle
+
     location = resolve_location(location)
-    season = _current_season()
-    crop_df = loader.load_all()["crop"]
-    rows = crop_df[(crop_df["Location"] == location) & (crop_df["Season"] == season)]
-    rows = rows.sort_values("Revenue_Rs_Lakh", ascending=False).head(10)
+    season = season or _current_season()
 
-    plans = []
-    for i, (_, r) in enumerate(rows.iterrows()):
-        fert_cost = (
-            float(r["Fertilizer_N_Kg_Ha"]) * config.FERTILIZER_PRICE_RS_PER_KG_NUTRIENT["N"]
-            + float(r["Fertilizer_P_Kg_Ha"]) * config.FERTILIZER_PRICE_RS_PER_KG_NUTRIENT["P"]
-            + float(r["Fertilizer_K_Kg_Ha"]) * config.FERTILIZER_PRICE_RS_PER_KG_NUTRIENT["K"]
+    profile = pp.get_region_season_profile(location, season, year=year)
+    assessment = fz.evaluate_uncertainty(
+        profile.rainfall.avg_deviation_percent,
+        profile.water.avg_storage_percent,
+        profile.soil.fertility_index,
+    )
+
+    results = {}
+    for use_fuzzy in (True, False):
+        problem, result = run_nsga2_with_fuzzy_toggle(
+            profile,
+            assessment,
+            total_land_ha=total_land_ha,
+            budget_rs=budget_rs,
+            use_fuzzy=use_fuzzy,
+            pop_size=_DEMO_POP_SIZE,
+            track_history=False,
         )
-        cost_per_ha = fert_cost + float(r["Pesticide_Cost_Rs_Ha"]) + float(r["Labor_Days_Ha"]) * config.LABOR_WAGE_RS_PER_DAY
-        plans.append({
-            "id": i,
-            "cost": round(cost_per_ha),
-            "yield_val": round(float(r["Yield_Kg_Ha"]) / 1000.0, 2),
-            "water_val": round(float(r["Water_Req_mm"]) * config.LITERS_PER_MM_PER_HA / 1_000_000, 2),
-            "env_impact": round(float(r["Fertilizer_N_Kg_Ha"]) * config.CARBON_FERTILIZER_FACTOR, 2),
-            "is_recommended": i == 0,
-            "crops": {str(r["Crop_Name"]): 1.0},
-            "rank": i + 1,
-        })
-    best = plans[0] if plans else None
+        raw_plans = [p for p in extract_pareto_plans(result, problem) if p.feasible]
+        key = "fuzzy" if use_fuzzy else "non_fuzzy"
+        results[key] = _summarize_pareto_front(raw_plans, total_land_ha)
+
     return {
         "location": location,
-        "total_land_ha": None,  # not meaningful here -- these are per-ha single-crop estimates, no plan was sized to a farm
-        "num_plans": len(plans),
-        "fuzzy_weights": None,
-        "plans": plans,
-        "best_plan": {"id": best["id"], "cost": best["cost"], "yield_val": best["yield_val"]} if best else None,
-        "is_fallback": True,
-        "fallback_reason": "live NSGA-II run and saved results both unavailable; single-crop estimates from crop.csv",
+        "season": season,
+        "year": profile.year,
+        "total_land_ha": total_land_ha,
+        "fuzzy_assessment": vars(assessment),
+        "fuzzy": results["fuzzy"],
+        "non_fuzzy": results["non_fuzzy"],
     }
 
 
@@ -448,12 +572,16 @@ def _synthetic_plans_from_csv(location: str) -> dict:
 def get_plans(location: str, total_land_ha: float = 5.0, budget_rs: Optional[float] = None) -> dict:
     location = resolve_location(location)
     try:
-        profile, assessment, raw_plans, crop_confidence_map = _run_dashboard_pareto_front(
-            location, total_land_ha=total_land_ha, budget_rs=budget_rs
+        profile, assessment, raw_plans, crop_confidence_map, result = _run_dashboard_pareto_front(
+            location, total_land_ha=total_land_ha, budget_rs=budget_rs, track_history=True
         )
         ranked = ranking.rank_plans(raw_plans, crop_confidence_map, preference="balanced", max_plans=_DEMO_POP_SIZE)
         if not ranked:
             raise RuntimeError("NSGA-II run produced no feasible plans")
+        convergence_history = extract_convergence_history(result)
+        hypervolume_history = [
+            {"generation": g["generation"], "hypervolume": g["hypervolume"]} for g in convergence_history
+        ]
 
         plans_out = []
         for rp in ranked:
@@ -489,41 +617,15 @@ def get_plans(location: str, total_land_ha: float = 5.0, budget_rs: Optional[flo
             "plans": plans_out,
             "best_plan": {"id": best["id"], "cost": best["cost"], "yield_val": best["yield_val"]} if best else None,
             "is_fallback": False,
+            "hypervolume_history": hypervolume_history,
         }
-    except Exception as live_exc:  # noqa: BLE001 -- deliberate: this endpoint must degrade, never 500
+    except Exception as live_exc:  # noqa: BLE001 -- deliberate: catch broadly so we can raise one clean, honest error below
         print(f"[dashboard_service.get_plans] live NSGA-II run failed for {location}: {live_exc!r}")
-        saved = _last_saved_run_for(location)
-        if saved is not None:
-            plans_out = []
-            for p in saved["plans"]:
-                crops = {
-                    name: round(pct / 100, 4)
-                    for name, pct in zip(p["crop_names"], p["allocation_percent"])
-                    if pct > 0.5
-                }
-                area = sum(p["area_ha"]) or 1.0
-                plans_out.append({
-                    "id": p["rank"] - 1,
-                    "cost": round(p["cost_rs"] / area),
-                    "yield_val": round(p["yield_tonnes"] / area, 2),
-                    "water_val": round(p["water_liters"] / area / 1_000_000, 2),
-                    "env_impact": round(p["env_impact_score"] / area, 2),
-                    "is_recommended": p["rank"] == 1,
-                    "crops": crops,
-                    "rank": p["rank"],
-                })
-            best = plans_out[0] if plans_out else None
-            return {
-                "location": location,
-                "total_land_ha": sum(saved["plans"][0]["area_ha"]) if saved["plans"] else total_land_ha,
-                "num_plans": len(plans_out),
-                "fuzzy_weights": saved["fuzzy_assessment"],
-                "plans": plans_out,
-                "best_plan": {"id": best["id"], "cost": best["cost"], "yield_val": best["yield_val"]} if best else None,
-                "is_fallback": True,
-                "fallback_reason": f"live run failed; showing last saved run {saved.get('run_id')}",
-            }
-        return _synthetic_plans_from_csv(location)
+        raise PlanGenerationError(
+            f"Could not generate plans for {location}: live NSGA-II optimisation "
+            f"failed ({live_exc}). No saved-run or CSV-estimate fallback is used -- "
+            f"see PlanGenerationError docstring."
+        ) from live_exc
 
 
 # ---------------------------------------------------------------------------
@@ -532,19 +634,23 @@ def get_plans(location: str, total_land_ha: float = 5.0, budget_rs: Optional[flo
 
 def _radar_scores(rp, trio, irrigation_risk: float, dep_by_crop: dict) -> dict:
     """0-100 scores across 6 axes for the comparison radar chart.
-    yield/cost_eff/water are TOPSIS-style min-max normalisations computed
-    over just these 3 compared plans (higher = better, direction-flipped
-    for cost). land reuses the same yield normalisation as a land-use
-    efficiency proxy (all 3 plans share the same total_land_ha, so
-    higher yield IS higher yield-per-hectare here). risk is the region's
-    fuzzy irrigation_risk, inverted (same value for all 3 plans -- it's a
-    regional reading, not plan-specific). market has no real market data
-    behind it, so it's built from something the dataset does have: the
-    plan's crops' average Rainfall_Dependency -- lower climate-dependency
-    is read as more market-stable regardless of weather swings."""
+    yield/cost_eff/water/land are TOPSIS-style min-max normalisations
+    computed over just these 3 compared plans (higher = better,
+    direction-flipped for cost/water/land, where a lower raw value is
+    better). land uses each plan's real env_impact_score -- NSGA-II's 4th
+    optimisation objective, sqrt(leaching_risk * carbon_proxy) from
+    fertiliser and irrigation load (see optimization/problem.py) -- as the
+    land-impact proxy, so it's an independent signal rather than a copy of
+    yield. risk is the region's fuzzy irrigation_risk, inverted (same
+    value for all 3 plans -- it's a regional reading, not plan-specific).
+    market has no real market data behind it, so it's built from something
+    the dataset does have: the plan's crops' average Rainfall_Dependency
+    -- lower climate-dependency is read as more market-stable regardless
+    of weather swings."""
     yields = [p.yield_tonnes for p in trio]
     costs = [p.cost_rs for p in trio]
     waters = [p.water_liters for p in trio]
+    envs = [p.env_impact_score for p in trio]
 
     def norm(v, values, higher_better):
         lo, hi = min(values), max(values)
@@ -566,7 +672,7 @@ def _radar_scores(rp, trio, irrigation_risk: float, dep_by_crop: dict) -> dict:
         "yield": round(norm(rp.yield_tonnes, yields, True)),
         "cost_eff": round(norm(rp.cost_rs, costs, False)),
         "water": round(norm(rp.water_liters, waters, False)),
-        "land": round(norm(rp.yield_tonnes, yields, True)),
+        "land": round(norm(rp.env_impact_score, envs, False)),
         "risk": round((1 - irrigation_risk) * 100),
         "market": round((1 - avg_dep_factor) * 100),
     }
@@ -577,7 +683,7 @@ _PLOT_LABELS = ["Plots 1, 2, 4", "Plots 3, 5", "Plot 6", "Plot 7", "Plots 8, 9",
 
 def get_comparison(location: str, total_land_ha: float = 5.0, budget_rs: Optional[float] = None) -> dict:
     location = resolve_location(location)
-    profile, assessment, raw_plans, crop_confidence_map = _run_dashboard_pareto_front(
+    profile, assessment, raw_plans, crop_confidence_map, _result = _run_dashboard_pareto_front(
         location, total_land_ha=total_land_ha, budget_rs=budget_rs
     )
     if not raw_plans:

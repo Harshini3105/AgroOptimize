@@ -1,0 +1,61 @@
+Location,Year,Month,Season,Monthly_Rainfall_mm,Rainy_Days,Max_Daily_Rainfall_mm,Min_Temp_C,Max_Temp_C,Humidity_Percent,Rainfall_Type,Normal_Rainfall_mm,Deviation_from_Normal_mm,Deviation_Percent,data_source,Annual_Normal_mm
+Salem,2020,January,Winter,7.8,2,5.8,18.4,33.2,56,Light,57.0,-49.2,-86.3,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,February,Winter,5.2,1,5.2,19.4,35.0,52,Light,57.0,-51.8,-90.9,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,March,Summer,22.4,5,12.8,22.0,37.8,50,Pre-monsoon,33.3,-10.9,-32.7,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,April,Summer,58.4,8,26.4,24.2,39.6,56,Pre-monsoon,33.3,25.1,75.4,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,May,Summer,74.6,10,34.2,26.0,40.8,60,Pre-monsoon,33.3,41.3,124.0,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,June,Southwest Monsoon,48.2,8,21.4,25.2,37.0,66,Monsoon,80.0,-31.8,-39.8,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,July,Southwest Monsoon,62.4,11,26.8,24.2,35.6,70,Monsoon,80.0,-17.6,-22.0,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,August,Southwest Monsoon,54.8,10,23.2,23.8,35.2,72,Monsoon,80.0,-25.2,-31.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,September,Southwest Monsoon,96.4,14,42.8,23.4,34.6,74,Monsoon,80.0,16.4,20.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,October,Northeast Monsoon,132.8,17,56.4,22.6,33.4,78,Monsoon,88.7,44.1,49.7,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,November,Northeast Monsoon,104.2,14,44.6,21.2,32.0,75,Monsoon,88.7,15.5,17.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2020,December,Northeast Monsoon,38.4,6,20.4,19.8,31.4,64,Light,88.7,-50.3,-56.7,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,January,Winter,6.4,2,4.8,18.2,33.4,55,Light,57.0,-50.6,-88.8,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,February,Winter,8.6,2,6.4,19.6,35.2,53,Light,57.0,-48.4,-84.9,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,March,Summer,26.8,6,14.8,22.4,38.0,51,Pre-monsoon,33.3,-6.5,-19.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,April,Summer,50.2,7,22.8,24.4,39.8,57,Pre-monsoon,33.3,16.9,50.8,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,May,Summer,80.4,11,38.2,26.2,41.0,61,Pre-monsoon,33.3,47.1,141.4,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,June,Southwest Monsoon,40.6,7,18.2,25.0,36.8,65,Monsoon,80.0,-39.4,-49.2,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,July,Southwest Monsoon,66.8,12,28.4,24.0,35.4,71,Monsoon,80.0,-13.2,-16.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,August,Southwest Monsoon,48.4,9,20.4,23.6,35.0,73,Monsoon,80.0,-31.6,-39.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,September,Southwest Monsoon,100.2,15,44.6,23.2,34.4,75,Monsoon,80.0,20.2,25.3,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,October,Northeast Monsoon,118.4,15,50.2,22.4,33.2,79,Monsoon,88.7,29.7,33.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,November,Northeast Monsoon,112.6,15,48.4,21.0,31.8,76,Monsoon,88.7,23.9,26.9,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2021,December,Northeast Monsoon,32.2,5,16.8,19.6,31.2,63,Light,88.7,-56.5,-63.7,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,January,Winter,10.4,3,7.6,18.6,33.6,57,Light,57.0,-46.6,-81.8,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,February,Winter,4.0,1,4.0,19.2,34.8,51,Light,57.0,-53.0,-93.0,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,March,Summer,20.2,4,11.6,22.2,37.6,50,Pre-monsoon,33.3,-13.1,-39.3,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,April,Summer,62.4,9,28.4,24.0,39.4,58,Pre-monsoon,33.3,29.1,87.4,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,May,Summer,66.8,9,31.4,25.8,40.6,59,Pre-monsoon,33.3,33.5,100.6,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,June,Southwest Monsoon,52.4,9,23.2,25.1,36.9,67,Monsoon,80.0,-27.6,-34.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,July,Southwest Monsoon,58.4,10,25.2,24.1,35.5,69,Monsoon,80.0,-21.6,-27.0,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,August,Southwest Monsoon,58.6,11,24.8,23.7,35.1,71,Monsoon,80.0,-21.4,-26.7,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,September,Southwest Monsoon,86.4,13,38.6,23.3,34.5,73,Monsoon,80.0,6.4,8.0,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,October,Northeast Monsoon,142.6,18,60.8,22.5,33.3,80,Monsoon,88.7,53.9,60.8,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,November,Northeast Monsoon,92.4,12,39.8,21.1,31.9,74,Monsoon,88.7,3.7,4.2,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2022,December,Northeast Monsoon,42.6,7,22.4,19.9,31.5,65,Light,88.7,-46.1,-52.0,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,January,Winter,7.2,2,5.4,18.3,33.3,56,Light,57.0,-49.8,-87.4,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,February,Winter,5.8,1,5.8,19.5,35.1,52,Light,57.0,-51.2,-89.8,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,March,Summer,19.4,4,11.2,22.1,37.7,50,Pre-monsoon,33.3,-13.9,-41.7,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,April,Summer,56.4,8,25.4,24.1,39.5,57,Pre-monsoon,33.3,23.1,69.4,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,May,Summer,70.4,10,32.4,26.1,40.9,60,Pre-monsoon,33.3,37.1,111.4,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,June,Southwest Monsoon,46.2,8,20.6,25.1,36.9,66,Monsoon,80.0,-33.8,-42.2,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,July,Southwest Monsoon,60.4,11,26.0,24.1,35.5,70,Monsoon,80.0,-19.6,-24.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,August,Southwest Monsoon,53.4,10,22.6,23.7,35.1,72,Monsoon,80.0,-26.6,-33.2,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,September,Southwest Monsoon,92.4,14,41.2,23.3,34.5,74,Monsoon,80.0,12.4,15.5,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,October,Northeast Monsoon,128.4,16,55.2,22.5,33.3,78,Monsoon,88.7,39.7,44.8,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,November,Northeast Monsoon,100.4,13,43.2,21.1,31.9,75,Monsoon,88.7,11.7,13.2,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2023,December,Northeast Monsoon,35.8,6,18.6,19.8,31.4,64,Light,88.7,-52.9,-59.6,"Project baseline dataset (2020-2023, course-provided)",800
+Salem,2024,January,Winter,7.2,2,5.4,18.3,33.3,56,Light,57.0,-49.8,-87.4,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,February,Winter,5.8,1,5.8,19.5,35.1,52,Light,57.0,-51.2,-89.8,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,March,Summer,19.4,4,11.2,22.1,37.7,50,Pre-monsoon,33.3,-13.9,-41.7,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,April,Summer,56.4,8,25.4,24.1,39.5,57,Pre-monsoon,33.3,23.1,69.4,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,May,Summer,70.4,10,32.4,26.1,40.9,60,Pre-monsoon,33.3,37.1,111.4,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,June,Southwest Monsoon,46.2,8,20.6,25.1,36.9,66,Monsoon,80.0,-33.8,-42.2,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,July,Southwest Monsoon,60.4,11,26.0,24.1,35.5,70,Monsoon,80.0,-19.6,-24.5,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,August,Southwest Monsoon,53.4,10,22.6,23.7,35.1,72,Monsoon,80.0,-26.6,-33.2,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,September,Southwest Monsoon,92.4,14,41.2,23.3,34.5,74,Monsoon,80.0,12.4,15.5,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,October,Northeast Monsoon,128.4,16,55.2,22.5,33.3,78,Monsoon,88.7,39.7,44.8,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,November,Northeast Monsoon,100.4,13,43.2,21.1,31.9,75,Monsoon,88.7,11.7,13.2,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800
+Salem,2024,December,Northeast Monsoon,35.8,6,18.6,19.8,31.4,64,Light,88.7,-52.9,-59.6,"Estimated (2024) - live download attempted from data.gov.in API (403), CGWB gwdata portal (maintenance mode), data.gov.in catalog (robots.txt blocked), agmarknet.gov.in (403); all unreachable from this environment on 2026-09-17. Value = 2023 actual monthly rainfall/weather repeated verbatim (no independent 2024 observation; set in a prior session).",800

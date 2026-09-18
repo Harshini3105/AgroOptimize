@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: agrooptimize-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    envVars:
+      - key: CORS_ALLOW_ORIGINS
+        value: https://agrooptimize.vercel.app
+    healthCheckPath: /health

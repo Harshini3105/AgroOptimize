@@ -34,6 +34,13 @@ class FarmPlanRequest(BaseModel):
     # all, since that's the expensive part (~2-3x slower NSGA-II run).
     save_results: bool = True
 
+    # Opaque per-browser id (see src/services/api.js) attached to a saved
+    # run so GET /api/history/{location} can show it back only to the
+    # client that actually generated it -- there are no real user accounts
+    # in this project, so this is what keeps one visitor's saved runs from
+    # appearing as another (or a brand-new) visitor's "completed" history.
+    client_id: Optional[str] = None
+
 
 class SoilOut(BaseModel):
     soil_type: str
@@ -163,6 +170,7 @@ class SavedRunSummaryOut(BaseModel):
     preference: Optional[str] = None
     saved_at: Optional[str] = None
     n_plans: int
+    client_id: Optional[str] = None
 
 
 class CatalogOut(BaseModel):

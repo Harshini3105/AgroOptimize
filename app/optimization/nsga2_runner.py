@@ -21,6 +21,8 @@ from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.optimize import minimize
 
 from app import config
+from app.data.preprocessing import RegionSeasonProfile
+from app.fuzzy.engine import UncertaintyAssessment
 from app.optimization.operators import AllocationRepair, GaussianMutation, SinglePointCrossover
 from app.optimization.problem import FarmPlanProblem
 
@@ -84,6 +86,36 @@ def run_nsga2(
         save_history=track_history,
     )
     return result
+
+
+def run_nsga2_with_fuzzy_toggle(
+    profile: RegionSeasonProfile,
+    assessment: UncertaintyAssessment,
+    total_land_ha: float,
+    budget_rs: Optional[float] = None,
+    use_fuzzy: bool = True,
+    **run_kwargs,
+):
+    """Convenience entry point for the Task 4 fuzzy-vs-non-fuzzy comparison
+    study: builds a FarmPlanProblem with `use_fuzzy` applied (see
+    CropVector.from_candidates / FarmPlanProblem in app/optimization/
+    problem.py -- that's where the actual fuzzy-bypass logic lives) and
+    runs it through the normal `run_nsga2`. `use_fuzzy=True` reproduces the
+    exact behaviour every other caller (plan_service, dashboard_service)
+    already gets; `use_fuzzy=False` is the non-fuzzy baseline, where every
+    crop's yield confidence is trusted at 1.0 instead of being adjusted by
+    the Mamdani rule base. Any extra `run_kwargs` (pop_size, n_gen, seed,
+    etc.) pass straight through to `run_nsga2`.
+    """
+    problem = FarmPlanProblem(
+        profile=profile,
+        assessment=assessment,
+        total_land_ha=total_land_ha,
+        budget_rs=budget_rs,
+        use_fuzzy=use_fuzzy,
+    )
+    result = run_nsga2(problem, **run_kwargs)
+    return problem, result
 
 
 def extract_convergence_history(result) -> List[dict]:

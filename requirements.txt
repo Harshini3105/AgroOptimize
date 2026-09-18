@@ -1,0 +1,12 @@
+pandas>=2.1
+numpy>=1.26
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.5
+pymoo>=0.6.1
+scikit-fuzzy>=0.4.2
+networkx>=3.2
+matplotlib>=3.8
+pytest>=8.0
+httpx>=0.28  # required by starlette.testclient.TestClient (tests/test_api.py, test_pipeline.py)
+requests>=2.31  # live weather (Open-Meteo) in app/services/dashboard_service.py
