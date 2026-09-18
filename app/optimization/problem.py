@@ -45,14 +45,23 @@ class CropVector:
 
     @classmethod
     def from_candidates(
-        cls, crops: List[CropCandidate], assessment: UncertaintyAssessment
+        cls, crops: List[CropCandidate], assessment: UncertaintyAssessment, use_fuzzy: bool = True
     ) -> "CropVector":
-        conf = np.array(
-            [
-                crop_yield_confidence(assessment.yield_confidence, assessment.irrigation_risk, c.rainfall_dependency)
-                for c in crops
-            ]
-        )
+        """`use_fuzzy=False` bypasses the Mamdani fuzzy uncertainty
+        adjustment entirely (every crop gets confidence=1.0, i.e. the
+        dataset's "book" yield is trusted as-is) -- this is the non-fuzzy
+        baseline for the Task 4 fuzzy-vs-non-fuzzy comparison study, not a
+        change to the default (fuzzy-on) pipeline every other caller uses.
+        """
+        if use_fuzzy:
+            conf = np.array(
+                [
+                    crop_yield_confidence(assessment.yield_confidence, assessment.irrigation_risk, c.rainfall_dependency)
+                    for c in crops
+                ]
+            )
+        else:
+            conf = np.ones(len(crops))
         return cls(
             names=[c.name for c in crops],
             yield_kg_ha=np.array([c.yield_kg_ha for c in crops]),
@@ -73,13 +82,15 @@ class FarmPlanProblem(Problem):
         assessment: UncertaintyAssessment,
         total_land_ha: float,
         budget_rs: Optional[float] = None,
+        use_fuzzy: bool = True,
     ):
         self.profile = profile
         self.assessment = assessment
         self.total_land_ha = float(total_land_ha)
         self.budget_rs = budget_rs
+        self.use_fuzzy = use_fuzzy
 
-        self.crop_vec = CropVector.from_candidates(profile.candidate_crops, assessment)
+        self.crop_vec = CropVector.from_candidates(profile.candidate_crops, assessment, use_fuzzy=use_fuzzy)
         self.n_crops = len(profile.candidate_crops)
         n = self.n_crops
 
